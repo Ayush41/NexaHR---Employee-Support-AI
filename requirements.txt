@@ -1,4 +1,5 @@
 jinja2
+streamlit
 python-dotenv
 pypdf
 python-docx
