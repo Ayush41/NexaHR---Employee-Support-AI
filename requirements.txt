@@ -5,3 +5,13 @@ python-dotenv
 pypdf
 python-docx
 langchain
+pinecone-client
+tavily-python
+pinecone-text
+fastapi
+uvicorn
+pydantic
+pinecone
+pypdf
+python-docx
+python-dotenv
