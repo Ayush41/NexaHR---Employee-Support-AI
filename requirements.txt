@@ -16,3 +16,6 @@ pinecone
 pypdf
 python-docx
 python-dotenv
+pinecone
+langchain-openai
+langchain-pinecone
