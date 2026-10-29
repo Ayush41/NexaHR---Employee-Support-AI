@@ -21,3 +21,5 @@ tavily-python
 pypdf
 python-docx
 python-multipart
+requests
+streamlit
