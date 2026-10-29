@@ -1,11 +1,10 @@
 import time
-from pinecone import Pinecone , ServerlessSpec
+from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from app.core.config import get_settings
 
 settings = get_settings()
-
 
 _embeddings = None
 _vectorstore = None
@@ -40,7 +39,6 @@ def get_embedding_dimension(model_name: str | None = None) -> int:
     )
 
 
-
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
@@ -52,14 +50,19 @@ def get_embeddings():
         )
     return _embeddings
 
-
-
 def ensure_index():
     if not settings.pinecone_api_key:
         raise RuntimeError("PINECONE_API_KEY is missing")
     desired_dimension = get_embedding_dimension()
     pc = Pinecone(api_key=settings.pinecone_api_key)
-    names = [x["name"] for x in pc.list_indexes()]
+
+    def get_existing_names():
+        index_list = pc.list_indexes()
+        if hasattr(index_list, "names"):
+            return index_list.names()
+        return [idx.name if hasattr(idx, "name") else idx["name"] for idx in index_list]
+
+    names = get_existing_names()
 
     if settings.pinecone_index_name in names:
         index_info = pc.describe_index(settings.pinecone_index_name)
@@ -68,20 +71,25 @@ def ensure_index():
             current_dimension = index_info.get("dimension")
         if current_dimension is not None and current_dimension != desired_dimension:
             pc.delete_index(name=settings.pinecone_index_name)
-            while settings.pinecone_index_name in [x["name"] for x in pc.list_indexes()]:
+            while settings.pinecone_index_name in get_existing_names():
                 time.sleep(1)
-    if settings.pinecone_index_name not in [x["name"] for x in pc.list_indexes()]:
+
+    if settings.pinecone_index_name not in get_existing_names():
         pc.create_index(
             name=settings.pinecone_index_name,
             dimension=desired_dimension,
             metric="cosine",
             spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
-        while not pc.describe_index(settings.pinecone_index_name).status["ready"]:
+        while True:
+            desc = pc.describe_index(settings.pinecone_index_name)
+            status = getattr(desc, "status", {})
+            ready = status.get("ready") if isinstance(status, dict) else getattr(status, "ready", False)
+            if ready:
+                break
             time.sleep(1)
 
     return pc.Index(settings.pinecone_index_name)
-
 
 
 def get_vectorstore():
@@ -96,11 +104,8 @@ def get_vectorstore():
     return _vectorstore
 
 
-
 def get_retriever():
     return get_vectorstore().as_retriever(search_kwargs={"k": settings.top_k})
-
-
 
 
 def add_documents(chunks):
