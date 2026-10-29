@@ -11,6 +11,7 @@ pinecone-text
 fastapi
 uvicorn
 pydantic
+pydantic-settings
 pinecone
 pypdf
 python-docx
