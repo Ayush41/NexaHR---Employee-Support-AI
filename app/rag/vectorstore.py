@@ -1,6 +1,7 @@
 import time
 from pinecone import Pinecone, ServerlessSpec
-from langchain_openai import OpenAIEmbeddings
+# from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from app.core.config import get_settings
 
@@ -9,12 +10,21 @@ settings = get_settings()
 _embeddings = None
 _vectorstore = None
 
+# Openai
+# EMBEDDING_DIMENSIONS = {
+#     "text-embedding-3-small": 1536,
+#     "text-embedding-3-large": 3072,
+#     "text-embedding-ada-002": 1536,
+#     "all-minilm-l6-v2": 384,
+# }
 
+# GROQ
 EMBEDDING_DIMENSIONS = {
+    "sentence-transformers/all-minilm-l6-v2": 384,
+    "all-minilm-l6-v2": 384,
     "text-embedding-3-small": 1536,
     "text-embedding-3-large": 3072,
     "text-embedding-ada-002": 1536,
-    "all-minilm-l6-v2": 384,
 }
 
 
@@ -39,14 +49,25 @@ def get_embedding_dimension(model_name: str | None = None) -> int:
     )
 
 
+# def get_embeddings():
+#     global _embeddings
+#     if _embeddings is None:
+#         if not settings.openai_api_key:
+#             raise RuntimeError("OPENAI_API_KEY is missing")
+#         _embeddings = OpenAIEmbeddings(
+#             model=settings.embedding_model,
+#             api_key=settings.openai_api_key,
+#         )
+#     return _embeddings
+
 def get_embeddings():
     global _embeddings
+
     if _embeddings is None:
-        if not settings.openai_api_key:
-            raise RuntimeError("OPENAI_API_KEY is missing")
-        _embeddings = OpenAIEmbeddings(
-            model=settings.embedding_model,
-            api_key=settings.openai_api_key,
+        _embeddings = HuggingFaceEmbeddings(
+            model_name = settings.embedding_model,
+            model_kwargs={"device":"cpu"},
+            encode_kwargs= {"normalize_embeddings":True},
         )
     return _embeddings
 

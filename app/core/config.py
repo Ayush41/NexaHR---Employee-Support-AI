@@ -1,5 +1,6 @@
 # Centralized Setting class
 
+from openai.types import embedding
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from pathlib import Path
@@ -10,13 +11,18 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     app_name: str = "Nexa-HR Policy Agentic RAG Copilot"
     app_env: str = "development"
-    openai_api_key: str = ""
+    # openai_api_key: str = ""
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+
     tavily_api_key: str = ""
     pinecone_api_key: str = ""
     pinecone_index_name: str = "NexaHR_Policy-RAG"
     pinecone_namespace: str = "company-hr-kb"
-    embedding_model: str = "text-embedding-3-small"
-    openai_model: str = "gpt-4o-mini"
+
+    # embedding_model: str = "text-embedding-3-small"
+    embedding_model: str  = "sentence-transformers/all-MiniLM-L6-v2"
+    # openai_model: str = "gpt-4o-mini"
     top_k: int = 4
     max_retries: int = 1
     admin_api_key: str = "change-me-in-production"

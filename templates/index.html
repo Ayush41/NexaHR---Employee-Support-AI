@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexaHR</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo">N</div>
+                <div class="brand-info">
+                    <h1>NexaHR</h1>
+                    <span class="status-indicator">
+                        <span class="status-dot" id="status-dot"></span>
+                        <span id="status-text">Connecting...</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h2 class="section-title">Common Questions</h2>
+                <div class="quick-prompts">
+                    <button class="prompt-chip" data-query="How many annual leave days do full-time employees get?">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        Annual leave policy
+                    </button>
+                    <button class="prompt-chip"
+                        data-query="What is the remote work policy and how many days can I work from home?">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        Remote work policy
+                    </button>
+                    <button class="prompt-chip" data-query="What should I do if there is a discrepancy in my payslip?">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Payroll & payslips
+                    </button>
+                    <button class="prompt-chip" data-query="What health benefits and medical insurance are provided?">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                        </svg>
+                        Medical & benefits
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h2 class="section-title">Knowledge Ingestion</h2>
+                <form id="ingest-form" class="ingest-box">
+                    <label class="input-label" for="admin-key">Admin Key</label>
+                    <input type="password" id="admin-key" class="text-input" placeholder="Enter admin API key"
+                        value="change-me-in-production">
+
+                    <label class="input-label" for="doc-file">Policy Document</label>
+                    <input type="file" id="doc-file" class="file-input" accept=".pdf,.docx,.txt,.md" required>
+
+                    <button type="submit" id="btn-ingest" class="btn-secondary">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Index Document
+                    </button>
+                    <div id="ingest-status" class="feedback-msg"></div>
+                </form>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>NexaHR &copy; 2026. Enterprise HR Assistant.</p>
+            </div>
+        </aside>
+
+        <!-- Main Chat Workspace -->
+        <main class="chat-workspace">
+            <!-- Header -->
+            <header class="chat-header">
+                <div class="header-titles">
+                    <h2>NexaHR Workspace</h2>
+                    <span class="subtitle">Agentic HR Policy & Support Assistant</span>
+                </div>
+                <button id="btn-clear" class="btn-text" title="Clear Conversation">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Clear Chat
+                </button>
+            </header>
+
+            <!-- Message History -->
+            <section class="chat-scroll-area" id="chat-messages">
+                <div class="message assistant-msg welcome-msg">
+                    <div class="avatar">N</div>
+                    <div class="message-content">
+                        <div class="message-body">
+                            <p>Hello! I am <strong>NexaHR</strong>, your corporate HR and workplace policy assistant.
+                            </p>
+                            <p>You can ask me questions about internal policies, leave entitlements, remote work,
+                                attendance, benefits, or submit an inquiry.</p>
+                        </div>
+                        <div class="meta-row">
+                            <span class="source-pill pill-system">System Ready</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Input Area -->
+            <footer class="chat-input-bar">
+                <form id="chat-form" class="input-form">
+                    <textarea id="user-input" rows="1"
+                        placeholder="Ask NexaHR about company policies, leave, or benefits..." required></textarea>
+                    <button type="submit" id="btn-send" class="btn-primary" aria-label="Send message">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+                <div class="input-hint">Press <strong>Enter</strong> to send &bull; <strong>Shift + Enter</strong> for a
+                    new line</div>
+            </footer>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>

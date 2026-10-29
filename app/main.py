@@ -1,4 +1,3 @@
-from regex import template
 from fastapi import FastAPI, Request
 from pathlib import Path
 from fastapi.responses import HTMLResponse
@@ -9,16 +8,21 @@ from app.core.config import get_settings, BASE_DIR
 from app.core.logging import configure_logging
 from app.services.audit import init_db
 
-
-# FastAPI App and conneting the API routes, templates and static files
+# FastAPI App and connecting the API routes, templates and static files
 
 configure_logging()
 settings = get_settings()
 init_db()
 
+# Ensure directories exist
+(BASE_DIR / "static").mkdir(parents=True, exist_ok=True)
+(BASE_DIR / "templates").mkdir(parents=True, exist_ok=True)
+(BASE_DIR / "uploads").mkdir(parents=True, exist_ok=True)
+(BASE_DIR / "data").mkdir(parents=True, exist_ok=True)
+
 app = FastAPI(title=settings.app_name, version="1.0.0")
 app.include_router(router)
-app.mount("/static",StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @app.get("/", response_class=HTMLResponse)

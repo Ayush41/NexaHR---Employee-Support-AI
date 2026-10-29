@@ -9,6 +9,10 @@ env/
 .env.*
 !.env.example
 
+# Python cache files
+__pycache__/
+*.py[cod]
+
 # Python cache and compiled files
 __pycache__/
 *.py[cod]
