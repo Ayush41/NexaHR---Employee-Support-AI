@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             hideTypingIndicator();
             appendAssistantMessage({
-                answer: `Error: ${err.message}. Please check your server and API keys.`,
+                answer: `Error: ${err.message}`,
                 source_used: "direct",
             });
         }
@@ -241,4 +241,3 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/'/g, "&#039;");
     }
 });
-

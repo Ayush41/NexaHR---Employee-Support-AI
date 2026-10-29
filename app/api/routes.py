@@ -1,3 +1,6 @@
+import json
+import urllib.request
+import urllib.error
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 from pydantic import BaseModel, Field
@@ -13,12 +16,36 @@ router = APIRouter(prefix="/api")
 settings = get_settings()
 
 class ChatRequest(BaseModel):
-    question:str = Field(min_length=2,max_length=3000)
+    question: str = Field(min_length=2, max_length=3000)
 
 @router.get("/health")
 def health():
     return {"status": "ok", "service": settings.app_name}
 
+@router.get("/groq-models")
+def check_groq_models():
+    clean_key = settings.groq_api_key.strip().strip('"').strip("'")
+    if not clean_key:
+        return {"status": "error", "message": "GROQ_API_KEY is not set in .env"}
+    try:
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/models",
+            headers={"Authorization": f"Bearer {clean_key}"}
+        )
+        req.add_header("Authorization", "Bearer " + clean_key)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+            models = [m["id"] for m in data.get("data", [])]
+            return {
+                "status": "ok",
+                "configured_model": settings.groq_model,
+                "available_models_for_your_key": sorted(models),
+            }
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        return {"status": "error", "code": e.code, "message": error_body}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @router.post("/chat")
 def chat(payload: ChatRequest):
@@ -31,12 +58,9 @@ def chat(payload: ChatRequest):
             "trace": result.get("trace", []),
             "citations": result.get("citations", []),
             "rewritten_query": result.get("current_query", payload.question),
-
         }
-
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
 
 @router.post("/ingest")
 async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default="")):
@@ -53,4 +77,3 @@ async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default
     chunks = chunk_documents(docs)
     ids = add_documents(chunks)
     return {"message": "Document indexed", "file": dest.name, "chunks": len(chunks), "ids_created": len(ids)}
-    
