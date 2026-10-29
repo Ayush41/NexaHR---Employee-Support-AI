@@ -91,3 +91,107 @@ Otherwise return weak. JSON: {{"grade":"good"}} or {{"grade":"weak"}}.
 def after_kb(state: AgentState) -> Literal["generate_from_kb", "search_web"]:
     return "generate_from_kb" if state["kb_grade"] == "good" else "search_web"
 
+
+
+def search_web(state: AgentState):
+    result = web_search_tool().invoke({"query": state["current_query"]})
+    lines, citations = [], []
+    if isinstance(result, dict):
+        if result.get("answer"):
+            lines.append("Search answer: " + result["answer"])
+        for item in result.get("results", []):
+            title, url, content = item.get("title", ""), item.get("url", ""), item.get("content", "")
+            lines.append(f"Title: {title}\nURL: {url}\nContent: {content}")
+            citations.append({"title": title or url, "url": url, "type": "web"})
+    else:
+        lines.append(str(result))
+    return {
+        "web_results": "\n\n".join(lines),
+        "citations": citations,
+        "source_used": "web",
+        "trace": add_trace(state, "Web fallback → Tavily search"),
+    }
+
+
+
+def grade_web(state: AgentState):
+    grader = llm().with_structured_output(EvidenceGrade, method="json_mode")
+    grade = grader.invoke(f"""
+Question: {state['question']}
+Web evidence:\n{state['web_results']}
+Return good if the evidence is sufficient and directly relevant; otherwise weak.
+Return valid JSON like {{"grade":"good"}}.
+""")
+    return {"web_grade": grade.grade, "trace": add_trace(state, f"Web evidence grade → {grade.grade.upper()}")}
+
+
+
+def after_web(state: AgentState) -> Literal["generate_from_web", "rewrite_query", "insufficient"]:
+    if state["web_grade"] == "good":
+        return "generate_from_web"
+    if state["retry_count"] < settings.max_retries:
+        return "rewrite_query"
+    return "insufficient"
+
+
+
+
+def rewrite_query(state: AgentState):
+    rewritten = llm().invoke(f"""
+Rewrite this HR/employee-support question for better private knowledge retrieval and public web search.
+Preserve intent, add useful HR/policy keywords, do not answer, return only the query.
+Question: {state['question']}
+""").content.strip()
+    return {
+        "current_query": rewritten,
+        "retry_count": state["retry_count"] + 1,
+        "trace": add_trace(state, f"Query rewrite → {rewritten}"),
+    }
+
+
+
+def generate_from_kb(state: AgentState):
+    context = "\n\n".join(f"[Source: {d.metadata.get('source','unknown')}]\n{d.page_content}" for d in state["kb_docs"])
+    answer = llm().invoke(f"""
+You are an enterprise HR policy and employee support copilot. Answer ONLY from the private company HR KB below.
+Be concise, practical, respectful, and policy-grounded. If steps are present, present them clearly.
+Do not invent policy details. Mention that the answer is based on the company's private knowledge base.
+Question: {state['question']}\n\nPrivate KB:\n{context}
+""").content
+    citations = []
+    seen = set()
+    for d in state["kb_docs"]:
+        src = d.metadata.get("source", "Private KB")
+        if src not in seen:
+            seen.add(src)
+            citations.append({"title": src.split("/")[-1], "url": "", "type": "private_kb"})
+    return {"answer": answer, "source_used": "private_kb", "citations": citations, "trace": add_trace(state, "Answer generation → PRIVATE KB")}
+
+
+
+def generate_from_web(state: AgentState):
+    answer = llm().invoke(f"""
+You are an enterprise HR policy and employee support copilot. The private company HR KB was insufficient.
+Answer ONLY from the web evidence below. Clearly say this is external public information and may require HR validation before being treated as company policy or employment guidance.
+Question: {state['question']}\n\nWeb evidence:\n{state['web_results']}
+""").content
+    return {"answer": answer, "source_used": "web_search", "trace": add_trace(state, "Answer generation → WEB SEARCH")}
+
+
+
+def direct_answer(state: AgentState):
+    answer = llm().invoke(f"Respond briefly and naturally to: {state['question']}").content
+    return {"answer": answer, "source_used": "direct", "trace": add_trace(state, "Direct response → no retrieval")}
+
+
+
+
+
+def insufficient(state: AgentState):
+    return {
+        "answer": "I couldn't find enough reliable evidence in the company HR knowledge base or external search to answer confidently. Please contact the HR team or provide more details.",
+        "source_used": "insufficient_evidence",
+        "trace": add_trace(state, "Stopped → insufficient reliable evidence"),
+    }
+
+
