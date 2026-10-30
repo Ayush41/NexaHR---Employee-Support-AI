@@ -18,7 +18,7 @@ NEXAHR_ADMIN_PASSWORD=replace-with-a-strong-password
 NEXAHR_EMPLOYEE_USERNAME=employee
 NEXAHR_EMPLOYEE_PASSWORD=replace-with-a-strong-password
 ADMIN_API_KEY=replace-with-a-strong-admin-api-key
-API_BASE_URL=http://127.0.0.1:8000
+API_BASE_URL=http://127.0.0.1:8888
 ```
 
 Install dependencies with `pip install -r requirements.txt`. In one terminal, start
