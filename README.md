@@ -33,6 +33,12 @@ The diagram is a high-level target architecture. The current repository implemen
 - **External search:** Tavily
 - **Audit data:** SQLite
 
+## App DEMO
+<img width="1919" height="956" alt="image" src="https://github.com/user-attachments/assets/f0abdd52-fee3-43d7-bab2-c6a505b1144e" />
+
+<img width="1919" height="956" alt="image" src="https://github.com/user-attachments/assets/53c65e4f-6c62-4a3d-8b95-c953d3ab07c7" />
+
+
 ## Getting started
 
 ### Requirements
