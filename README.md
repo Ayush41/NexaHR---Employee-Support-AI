@@ -38,3 +38,14 @@ development and a deployment prototype, not a complete organization identity
 system. The FastAPI endpoints are not yet protected by user sessions or role-based
 authorization; protect the API and use an organization identity provider before
 exposing the app to a network.
+
+### Employee leave-balance demo
+
+The employee frontend includes a local sample record in
+`frontend/data/employee_leave_balances.json`: `emp1` has 20 annual leave days, has
+used 8, and has 12 remaining. Set `NEXAHR_EMPLOYEE_USERNAME=emp1` in `.env` and
+sign in with that employee account to try questions such as “How many leaves do I
+have left?” or “How many days can I apply for?”. Edit the JSON file to change the
+demo balance. This is frontend-only demonstration data and is not an authoritative
+or private HR system; a signed-in employee only sees the record matching their
+username.

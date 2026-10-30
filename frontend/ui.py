@@ -25,6 +25,7 @@ NODE_TO_STEP = {
     "generate_from_web": "generate",
     "direct_answer": "generate",
     "insufficient": "generate",
+    "employee_leave_balance": "generate",
 }
 
 
@@ -84,6 +85,10 @@ def render_workflow_panel(container, events: list[dict], running: bool) -> None:
         else:
             skipped = (
                 (route == "direct" and step_id in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"})
+                or (
+                    route == "employee_leave_records"
+                    and step_id in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"}
+                )
                 or (step_id == "search_web" and kb_grade == "good")
                 or (step_id == "rewrite_query" and web_grade == "good")
                 or (step_id == "rewrite_query" and "insufficient" in seen_nodes)
@@ -110,6 +115,10 @@ def render_workflow_panel(container, events: list[dict], running: bool) -> None:
                 )
                 or (
                     route == "direct"
+                    and key in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"}
+                )
+                or (
+                    route == "employee_leave_records"
                     and key in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"}
                 )
                 for key in earlier_steps
@@ -163,6 +172,7 @@ def render_workflow_panel(container, events: list[dict], running: bool) -> None:
             "web": "Tavily web search",
             "direct": "Direct response",
             "insufficient_evidence": "Insufficient evidence",
+            "employee_leave_records": "Employee leave records (demo)",
         }
         source_content = (
             f'<div class="source-value">{html.escape(source_labels.get(source, source))}</div>'

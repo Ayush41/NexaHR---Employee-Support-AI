@@ -89,6 +89,7 @@ def render_login() -> None:
         if authenticate(role, username, password):
             st.session_state["authenticated"] = True
             st.session_state["role"] = role
+            st.session_state["username"] = username
             st.session_state["messages"] = []
             st.session_state["last_trace"] = []
             st.session_state["last_events"] = []
