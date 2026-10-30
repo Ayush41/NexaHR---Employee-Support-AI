@@ -1,188 +1,157 @@
-import hmac
-import os
-from pathlib import Path
+from typing import Any
 
 import requests
 import streamlit as st
-from dotenv import load_dotenv
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(ROOT_DIR / ".env")
+from frontend.api import check_health, stream_chat
+from frontend.auth import render_login
+from frontend.ui import (
+    load_styles,
+    render_chat_history,
+    render_sidebar,
+    render_workflow_panel,
+)
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
-ADMIN_USERNAME = os.getenv("NEXAHR_ADMIN_USERNAME", "")
-ADMIN_PASSWORD = os.getenv("NEXAHR_ADMIN_PASSWORD", "")
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
+st.set_page_config(
+    page_title="NexaHR Employee Support",
+    page_icon="N",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+load_styles()
 
-st.set_page_config(page_title="NexaHR", page_icon="N", layout="wide")
 
+def consume_chat(question: str, workflow_panel: Any) -> None:
+    events: list[dict] = []
+    result: dict = {}
+    st.session_state["last_source"] = ""
+    st.session_state["last_trace"] = []
 
-def show_login() -> None:
-    st.title("NexaHR")
-    st.subheader("Admin sign in")
-    st.write("Sign in to chat with the HR assistant and manage policy documents.")
-
-    if not ADMIN_USERNAME or not ADMIN_PASSWORD:
-        st.error(
-            "Admin sign-in is not configured. Set NEXAHR_ADMIN_USERNAME and "
-            "NEXAHR_ADMIN_PASSWORD in the project .env file, then restart Streamlit."
+    with st.chat_message("assistant"):
+        answer_placeholder = st.empty()
+        answer_placeholder.markdown(
+            '<span class="panel-caption">Following the LangGraph workflow…</span>',
+            unsafe_allow_html=True,
         )
-        return
+        try:
+            for event in stream_chat(question):
+                if event.get("type") == "step":
+                    events.append(event)
+                    st.session_state["last_events"] = events.copy()
+                    st.session_state["last_trace"] = [
+                        line
+                        for item in events
+                        for line in item.get("data", {}).get("trace", [])
+                    ]
+                    render_workflow_panel(workflow_panel, events, running=True)
+                elif event.get("type") == "complete":
+                    result = event.get("result", {})
+                elif event.get("type") == "error":
+                    raise RuntimeError(event.get("message", "The chat request failed."))
 
-    with st.form("admin-login"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Sign in", use_container_width=True)
+            if not result:
+                raise RuntimeError("The chat stream ended before returning an answer.")
 
-    if submitted:
-        username_matches = hmac.compare_digest(username, ADMIN_USERNAME)
-        password_matches = hmac.compare_digest(password, ADMIN_PASSWORD)
-        if username_matches and password_matches:
-            st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("Invalid username or password.")
+            answer = result.get("answer", "The API returned no answer.")
+            citations = result.get("citations", [])
+            trace = result.get("trace", [])
+            source = result.get("source_used", "")
+            st.session_state["last_trace"] = trace
+            st.session_state["last_events"] = events.copy()
+            st.session_state["last_source"] = source
+
+            answer_placeholder.markdown(answer)
+            if citations:
+                with st.expander("Sources"):
+                    for citation in citations:
+                        title = citation.get("title", "Reference")
+                        url = citation.get("url")
+                        if url and url.startswith(("https://", "http://")):
+                            st.markdown(f"- [{title}]({url})")
+                        else:
+                            st.markdown(f"- {title}")
+
+            st.session_state.setdefault("messages", []).append(
+                {
+                    "role": "assistant",
+                    "content": answer,
+                    "citations": citations,
+                }
+            )
+        except (requests.RequestException, RuntimeError, ValueError) as exc:
+            answer = str(exc)
+            answer_placeholder.error(answer)
+            st.session_state.setdefault("messages", []).append(
+                {"role": "assistant", "content": answer}
+            )
+    if events:
+        render_workflow_panel(workflow_panel, events, running=False)
 
 
-def api_error_message(response: requests.Response) -> str:
-    try:
-        payload = response.json()
-    except ValueError:
-        return f"Backend returned HTTP {response.status_code}."
-
-    detail = payload.get("detail", payload.get("message"))
-    if isinstance(detail, str) and detail:
-        return detail
-    return f"Backend returned HTTP {response.status_code}."
-
-
-def show_admin_app() -> None:
-    with st.sidebar:
-        st.title("NexaHR")
-        st.caption("Signed in as admin")
-        if st.button("Sign out", use_container_width=True):
-            st.session_state.clear()
-            st.rerun()
-
-        st.divider()
-        st.subheader("Policy documents")
-        uploaded_file = st.file_uploader(
-            "Choose a PDF, DOCX, TXT, or Markdown file",
-            type=["pdf", "docx", "txt", "md"],
+if not st.session_state.get("authenticated", False):
+    st.markdown('<div class="page-kicker">NEXAHR · EMPLOYEE SUPPORT</div>', unsafe_allow_html=True)
+    left, right = st.columns([1.05, 0.95], gap="large", vertical_alignment="center")
+    with left:
+        render_login()
+    with right:
+        st.markdown(
+            """
+            <div class="login-brand">
+                <div class="brand-mark">N</div>
+                <div class="eyebrow">A BETTER WAY TO GET ANSWERS</div>
+                <h1>Good work starts<br><span>with clarity.</span></h1>
+                <p>Get helpful, grounded answers about the policies and resources
+                that make your workplace work.</p>
+                <div class="login-proof"><span>✓</span> Company knowledge, not guesswork</div>
+                <div class="login-proof"><span>✓</span> Sources and reasoning in view</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        if st.button(
-            "Upload and index",
-            disabled=uploaded_file is None,
-            use_container_width=True,
-        ):
-            if not ADMIN_API_KEY or ADMIN_API_KEY == "change-me-in-production":
-                st.error("Set a non-default ADMIN_API_KEY in the project .env file.")
-            else:
-                try:
-                    response = requests.post(
-                        f"{API_BASE_URL}/api/ingest",
-                        headers={"x-admin-key": ADMIN_API_KEY},
-                        files={
-                            "file": (
-                                uploaded_file.name,
-                                uploaded_file.getvalue(),
-                                uploaded_file.type or "application/octet-stream",
-                            )
-                        },
-                        timeout=300,
-                    )
-                    if not response.ok:
-                        st.error(api_error_message(response))
-                    else:
-                        result = response.json()
-                        st.success(
-                            f"Indexed {result['file']} ({result['chunks']} chunks)."
-                        )
-                except requests.RequestException as exc:
-                    st.error(f"Could not reach the NexaHR API: {exc}")
+else:
+    render_sidebar()
+    st.markdown(
+        '<div class="page-kicker">YOUR WORKPLACE, MADE CLEAR</div>'
+        '<h1 class="workspace-title">NexaHR Employee Support</h1>'
+        '<div class="workspace-subtitle">Ask a question. Get a clear, grounded answer.</div>',
+        unsafe_allow_html=True,
+    )
 
-    st.title("NexaHR Employee Support")
     try:
-        health = requests.get(f"{API_BASE_URL}/api/health", timeout=5)
-        health.raise_for_status()
-        st.caption(f"Backend: {health.json().get('status', 'connected')}")
+        check_health()
+        st.markdown(
+            '<div class="panel-caption">● Connected to your HR support workspace</div>',
+            unsafe_allow_html=True,
+        )
     except requests.RequestException:
         st.warning(
             "The NexaHR API is not reachable. Start the FastAPI backend and check "
             "API_BASE_URL in .env."
         )
 
-    for message in st.session_state.get("messages", []):
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            if message.get("citations"):
-                with st.expander("Sources"):
-                    for citation in message["citations"]:
-                        title = citation.get("title", "Reference")
-                        url = citation.get("url")
-                        st.markdown(f"- [{title}]({url})" if url else f"- {title}")
-            if message.get("trace"):
-                with st.expander("Agent execution trace"):
-                    for step in message["trace"]:
-                        st.markdown(f"- {step}")
+    chat_column, workflow_column = st.columns([0.69, 0.31], gap="large")
+    with chat_column:
+        st.markdown(
+            '<div class="chat-intro"><div class="chat-intro-title">'
+            'How can we help you today?</div><div class="chat-intro-copy">'
+            'Ask about workplace policies, leave, benefits, payroll, or getting support. '
+            'Answers are grounded in available evidence.</div></div>',
+            unsafe_allow_html=True,
+        )
+        render_chat_history()
+        question = st.chat_input("Ask NexaHR about a policy or workplace question")
 
-    question = st.chat_input("Ask about company policies, leave, benefits, or work")
+    with workflow_column:
+        workflow_panel = st.empty()
+        previous_events = st.session_state.get("last_events", [])
+        render_workflow_panel(workflow_panel, previous_events, running=False)
+
     if question:
         st.session_state.setdefault("messages", []).append(
             {"role": "user", "content": question}
         )
-        with st.chat_message("user"):
-            st.markdown(question)
-
-        with st.chat_message("assistant"):
-            with st.spinner("NexaHR is preparing an answer..."):
-                try:
-                    response = requests.post(
-                        f"{API_BASE_URL}/api/chat",
-                        json={"question": question},
-                        timeout=180,
-                    )
-                    if not response.ok:
-                        answer = f"Request failed: {api_error_message(response)}"
-                        st.error(answer)
-                        st.session_state["messages"].append(
-                            {"role": "assistant", "content": answer}
-                        )
-                    else:
-                        result = response.json()
-                        answer = result.get("answer", "The API returned no answer.")
-                        st.markdown(answer)
-                        citations = result.get("citations", [])
-                        trace = result.get("trace", [])
-                        if citations:
-                            with st.expander("Sources"):
-                                for citation in citations:
-                                    title = citation.get("title", "Reference")
-                                    url = citation.get("url")
-                                    st.markdown(
-                                        f"- [{title}]({url})" if url else f"- {title}"
-                                    )
-                        if trace:
-                            with st.expander("Agent execution trace"):
-                                for step in trace:
-                                    st.markdown(f"- {step}")
-                        st.session_state["messages"].append(
-                            {
-                                "role": "assistant",
-                                "content": answer,
-                                "citations": citations,
-                                "trace": trace,
-                            }
-                        )
-                except requests.RequestException as exc:
-                    answer = f"Could not reach the NexaHR API: {exc}"
-                    st.error(answer)
-                    st.session_state["messages"].append(
-                        {"role": "assistant", "content": answer}
-                    )
-
-
-if not st.session_state.get("authenticated", False):
-    show_login()
-else:
-    show_admin_app()
+        with chat_column:
+            with st.chat_message("user"):
+                st.markdown(question)
+        consume_chat(question, workflow_panel)
+        st.rerun()

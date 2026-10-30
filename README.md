@@ -8,12 +8,15 @@ Set `GROQ_API_KEY` in `.env`. NexaHR uses `openai/gpt-oss-120b` by default; set
 
 ## Streamlit frontend
 
-The Streamlit admin frontend is in `frontend/streamlit_app.py` and uses the existing
-FastAPI backend. Add these values to the project `.env` file:
+The modular Streamlit frontend is in `frontend/` (`auth.py`, `api.py`, `ui.py`,
+`config.py`, and `styles.css`) and uses the existing FastAPI backend. Configure
+separate admin and employee sign-ins in the project `.env`:
 
 ```env
 NEXAHR_ADMIN_USERNAME=admin
 NEXAHR_ADMIN_PASSWORD=replace-with-a-strong-password
+NEXAHR_EMPLOYEE_USERNAME=employee
+NEXAHR_EMPLOYEE_PASSWORD=replace-with-a-strong-password
 ADMIN_API_KEY=replace-with-a-strong-admin-api-key
 API_BASE_URL=http://127.0.0.1:8000
 ```
@@ -25,8 +28,13 @@ the backend with `run.bat`. In a second terminal at the project root, run:
 python -m streamlit run frontend\streamlit_app.py
 ```
 
-Open the Streamlit URL printed in the terminal. The initial frontend provides an
-admin sign-in, policy chat, and document upload. Employee accounts and permissions
-are not implemented yet. This initial sign-in gates the Streamlit UI only; protect
-the API with proper user authentication and role authorization before deploying
-outside a trusted development environment.
+Open the Streamlit URL printed in the terminal. Admin and employee sign-ins share
+the policy chat; only the admin workspace shows document ingestion. The chat
+streams LangGraph progress to the workflow and trace panel. The existing
+non-streaming `/api/chat` endpoint remains available to other clients.
+
+These environment-configured credentials are a basic frontend sign-in for
+development and a deployment prototype, not a complete organization identity
+system. The FastAPI endpoints are not yet protected by user sessions or role-based
+authorization; protect the API and use an organization identity provider before
+exposing the app to a network.
