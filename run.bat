@@ -32,10 +32,10 @@ if "%1"=="--ingest" (
 
 echo [4/4] Starting server...
 echo ----------------------------------------------------------
-echo  Web UI / Home: http://127.0.0.1:8000
-echo  API Docs     : http://127.0.0.1:8000/docs
-echo  Health check : http://127.0.0.1:8000/api/health
+echo  Web UI / Home: http://127.0.0.1:8888
+echo  API Docs     : http://127.0.0.1:8888/docs
+echo  Health check : http://127.0.0.1:8888/api/health
 echo ----------------------------------------------------------
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8888 --reload
 pause
 

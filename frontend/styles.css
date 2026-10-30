@@ -1,0 +1,315 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --ink: #17233c;
+  --muted: #74819a;
+  --line: #e9edf4;
+  --blue: #4467e8;
+  --blue-dark: #3455d1;
+  --canvas: #f6f8fc;
+  --mint: #eaf8f2;
+}
+
+.stApp {
+  background:
+    radial-gradient(ellipse at 30% -12%, rgba(226, 234, 255, .75), transparent 38%),
+    var(--canvas);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.stApp h1, .stApp h2, .stApp h3 {
+  color: var(--ink);
+  font-family: 'Manrope', sans-serif;
+  letter-spacing: -.035em;
+}
+
+[data-testid="stHeader"] {
+  background: transparent;
+}
+
+[data-testid="stSidebar"] {
+  background: #fff;
+  border-right: 1px solid var(--line);
+}
+
+[data-testid="stSidebar"] > div:first-child {
+  padding-top: 1.5rem;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: .25rem 0 1.5rem;
+}
+
+.brand-mark {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: linear-gradient(140deg, #587af6, #344ec4);
+  box-shadow: 0 9px 22px rgba(68, 103, 232, .24);
+  color: #fff;
+  font: 800 1.3rem 'Manrope', sans-serif;
+}
+
+.brand-name {
+  color: var(--ink);
+  font: 800 1.12rem 'Manrope', sans-serif;
+  letter-spacing: -.045em;
+}
+
+.brand-subtitle {
+  color: var(--muted);
+  font-size: .73rem;
+  margin-top: .12rem;
+}
+
+.page-kicker, .eyebrow {
+  color: var(--blue);
+  font-size: .69rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.workspace-title {
+  margin: .15rem 0 .1rem;
+}
+
+.workspace-subtitle {
+  color: var(--muted);
+  font-size: .92rem;
+  margin-bottom: 1.15rem;
+}
+
+.stButton > button, .stFormSubmitButton > button {
+  border-radius: 10px;
+  font-weight: 600;
+  min-height: 2.7rem;
+}
+
+.stButton > button[kind="primary"], .stFormSubmitButton > button[kind="primary"] {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.stButton > button[kind="primary"]:hover, .stFormSubmitButton > button[kind="primary"]:hover {
+  background: var(--blue-dark);
+  border-color: var(--blue-dark);
+}
+
+.workflow-card, .trace-card, .source-card, .chat-intro, .login-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 10px 32px rgba(34, 51, 84, .045);
+}
+
+.workflow-card, .trace-card, .source-card {
+  padding: 1rem 1.05rem;
+  margin-bottom: .85rem;
+}
+
+.panel-heading {
+  color: var(--ink);
+  font: 700 .94rem 'Manrope', sans-serif;
+  margin-bottom: .2rem;
+}
+
+.panel-caption {
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.5;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  padding: .56rem 0;
+  color: #69758b;
+  font-size: .79rem;
+  line-height: 1.4;
+}
+
+.workflow-step + .workflow-step {
+  border-top: 1px solid #f1f3f7;
+}
+
+.step-badge {
+  display: inline-flex;
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f1f3f8;
+  color: #8a94a8;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.workflow-step.done .step-badge {
+  background: var(--mint);
+  color: #21855d;
+}
+
+.workflow-step.active .step-badge {
+  background: #edf1ff;
+  color: var(--blue);
+}
+
+.workflow-step.active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.trace-line {
+  border-left: 2px solid #e8edfb;
+  color: #4a5870;
+  font-size: .76rem;
+  line-height: 1.5;
+  margin-left: .38rem;
+  padding: .15rem 0 .55rem .8rem;
+  overflow-wrap: anywhere;
+}
+
+.trace-line:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+
+.trace-dot {
+  color: var(--blue);
+  padding-right: .4rem;
+}
+
+.source-value {
+  color: #21855d;
+  font: 700 .87rem 'Manrope', sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.source-empty {
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.chat-intro {
+  background: linear-gradient(135deg, #fff, #f8faff);
+  margin: .2rem 0 1rem;
+  padding: 1.2rem 1.3rem;
+}
+
+.chat-intro-title {
+  color: var(--ink);
+  font: 700 1rem 'Manrope', sans-serif;
+  margin-bottom: .3rem;
+}
+
+.chat-intro-copy {
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.6;
+}
+
+.login-brand {
+  background:
+    radial-gradient(ellipse at 85% 12%, rgba(155, 181, 255, .37), transparent 32%),
+    linear-gradient(145deg, #17264f, #253f85 64%, #375dc3);
+  border-radius: 25px;
+  color: white;
+  min-height: 435px;
+  padding: 2.4rem 2.5rem;
+}
+
+.login-brand .eyebrow {
+  color: #b6c8ff;
+  margin-top: 2rem;
+}
+
+.login-brand h1 {
+  color: white;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  line-height: 1.19;
+  margin: .8rem 0;
+}
+
+.login-brand h1 span {
+  color: #b6c8ff;
+}
+
+.login-brand p {
+  color: #d3dcf5;
+  font-size: .94rem;
+  line-height: 1.7;
+  max-width: 430px;
+}
+
+.login-proof {
+  color: #e5eaff;
+  font-size: .83rem;
+  margin-top: 1rem;
+}
+
+.login-proof span {
+  color: #a7f0d0;
+  display: inline-block;
+  margin-right: .45rem;
+}
+
+.login-card {
+  margin: 1.2rem auto 0;
+  max-width: 560px;
+  padding: 1.55rem 1.7rem 1rem;
+}
+
+.stApp [data-testid="stForm"] {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 10px 32px rgba(34, 51, 84, .045);
+  margin-top: .8rem;
+  padding: 1.2rem 1.4rem 1.4rem;
+}
+
+.stApp [data-testid="stRadio"] [role="radiogroup"] {
+  gap: .6rem;
+}
+
+.login-card h3 {
+  font-size: 1.45rem;
+  margin-bottom: .15rem;
+}
+
+.login-footnote {
+  color: var(--muted);
+  font-size: .73rem;
+  padding: 1rem .2rem .1rem;
+  text-align: center;
+}
+
+[data-testid="stChatMessage"] {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(34, 51, 84, .035);
+  margin-bottom: .7rem;
+  padding: .9rem 1rem;
+}
+
+@media (max-width: 900px) {
+  .login-brand {
+    min-height: auto;
+    padding: 1.5rem;
+  }
+  .login-brand .eyebrow {
+    margin-top: 1.25rem;
+  }
+}

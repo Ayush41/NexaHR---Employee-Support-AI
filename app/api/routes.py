@@ -1,17 +1,20 @@
 import json
+import logging
 import urllib.request
 import urllib.error
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
-from app.rag.workflow import ask 
+from app.rag.workflow import ask, stream_ask
 from app.rag.vectorstore import add_documents
 from app.services.ingestion import load_file, chunk_documents, SUPPORTED
 from app.services.audit import write_audit
 
 router = APIRouter(prefix="/api")
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -61,6 +64,31 @@ def chat(payload: ChatRequest):
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/chat/stream")
+def chat_stream(payload: ChatRequest):
+    def event_stream():
+        try:
+            for event in stream_ask(payload.question):
+                if event["type"] == "complete":
+                    result = event["result"]
+                    write_audit(
+                        payload.question,
+                        result["source_used"],
+                        result.get("trace", []),
+                    )
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:
+            logger.exception("Streaming chat request failed")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
 
 @router.post("/ingest")
 async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default="")):

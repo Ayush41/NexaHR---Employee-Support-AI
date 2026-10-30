@@ -298,8 +298,8 @@ def build_graph():
 agent_graph = build_graph()
 
 
-def ask(question: str):
-    initial: AgentState = {
+def initial_state(question: str) -> AgentState:
+    return {
         "question": question,
         "current_query": question,
         "kb_docs": [],
@@ -312,4 +312,44 @@ def ask(question: str):
         "trace": [],
         "citations": [],
     }
+
+
+def ask(question: str):
+    initial = initial_state(question)
     return agent_graph.invoke(initial)
+
+
+def stream_ask(question: str):
+    state = initial_state(question)
+    for update in agent_graph.stream(state, stream_mode="updates"):
+        for node, values in update.items():
+            state.update(values)
+            safe_values = {
+                key: value
+                for key, value in values.items()
+                if key in {
+                    "source_used",
+                    "kb_grade",
+                    "web_grade",
+                    "trace",
+                    "answer",
+                    "citations",
+                }
+            }
+            if node == "retrieve_kb":
+                safe_values["retrieved_chunks"] = len(values.get("kb_docs", []))
+            yield {"type": "step", "node": node, "data": safe_values}
+
+    yield {
+        "type": "complete",
+        "result": {
+            key: state[key]
+            for key in (
+                "answer",
+                "source_used",
+                "trace",
+                "citations",
+                "current_query",
+            )
+        },
+    }
