@@ -20,6 +20,9 @@ The project demonstrates an evidence-first, agentic Retrieval-Augmented Generati
 
 The diagram is a high-level target architecture. The current repository implementation uses FastAPI, a modular Streamlit frontend, Pinecone, and a SQLite audit store. Some deployment and UI components shown in the diagram represent design direction rather than a configured production deployment.
 
+## LangGraph Nodes Diagram 
+![Langchain-Graph-Workflow](langchain_output.png)
+
 ### Technology
 
 - **API:** Python, FastAPI, Uvicorn
