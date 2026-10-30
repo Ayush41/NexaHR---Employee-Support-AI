@@ -193,6 +193,29 @@ def render_sidebar() -> None:
         render_brand()
         role = st.session_state.get("role", "Employee")
         st.caption("HR & management workspace" if role == "Admin" else "Employee workspace")
+        if role == "Employee":
+            from frontend.leave_balance import load_employee_leave_record
+
+            employee = load_employee_leave_record(
+                st.session_state.get("username", "")
+            )
+            if employee:
+                st.markdown(
+                    f"**{html.escape(employee['full_name'])}**  \n"
+                    f"Job ID: `{html.escape(employee['employee_id'])}`"
+                )
+                st.caption(
+                    f"{html.escape(employee['job_title'])} · "
+                    f"{html.escape(employee['department'])}"
+                )
+                st.caption(
+                    f"{html.escape(employee['location'])} · "
+                    f"Manager: {html.escape(employee['manager'])}"
+                )
+            else:
+                st.caption(
+                    f"Employee ID: {html.escape(st.session_state.get('username', ''))}"
+                )
         if st.button("Sign out", use_container_width=True):
             st.session_state.clear()
             st.rerun()

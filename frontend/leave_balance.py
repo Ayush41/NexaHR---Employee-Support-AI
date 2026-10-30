@@ -59,7 +59,12 @@ def load_employee_leave_record(employee_id: str) -> dict[str, Any] | None:
         )
 
     return {
-        "employee_id": employee_id,
+        "employee_id": str(record.get("job_id", employee_id)),
+        "full_name": str(record.get("full_name", employee_id)),
+        "job_title": str(record.get("job_title", "Not provided")),
+        "department": str(record.get("department", "Not provided")),
+        "location": str(record.get("location", "Not provided")),
+        "manager": str(record.get("manager", "Not provided")),
         "annual_leave_days": entitlement,
         "leave_days_used": used,
         "leave_days_remaining": entitlement - used,

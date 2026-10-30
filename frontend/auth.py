@@ -5,6 +5,9 @@ import streamlit as st
 from frontend.config import (
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
+    DEMO_EMPLOYEE_LOGIN_ENABLED,
+    DEMO_EMPLOYEE_PASSWORD,
+    DEMO_EMPLOYEE_USERNAME,
     EMPLOYEE_PASSWORD,
     EMPLOYEE_USERNAME,
 )
@@ -17,18 +20,32 @@ ROLE_CREDENTIALS = {
 
 def credentials_configured(role: str) -> bool:
     username, password = ROLE_CREDENTIALS[role]
-    return bool(username and password)
+    configured_credentials = bool(username and password)
+    demo_credentials = role == "Employee" and DEMO_EMPLOYEE_LOGIN_ENABLED
+    return configured_credentials or demo_credentials
 
 
 def authenticate(role: str, username: str, password: str) -> bool:
     configured_username, configured_password = ROLE_CREDENTIALS[role]
-    if not configured_username or not configured_password:
-        return False
-    return hmac.compare_digest(
-        username.encode("utf-8"), configured_username.encode("utf-8")
-    ) and hmac.compare_digest(
-        password.encode("utf-8"), configured_password.encode("utf-8")
+    configured_match = bool(configured_username and configured_password) and (
+        hmac.compare_digest(
+            username.encode("utf-8"), configured_username.encode("utf-8")
+        )
+        and hmac.compare_digest(
+            password.encode("utf-8"), configured_password.encode("utf-8")
+        )
     )
+    demo_match = (
+        role == "Employee"
+        and DEMO_EMPLOYEE_LOGIN_ENABLED
+        and hmac.compare_digest(
+            username.encode("utf-8"), DEMO_EMPLOYEE_USERNAME.encode("utf-8")
+        )
+        and hmac.compare_digest(
+            password.encode("utf-8"), DEMO_EMPLOYEE_PASSWORD.encode("utf-8")
+        )
+    )
+    return configured_match or demo_match
 
 
 def render_login() -> None:
@@ -70,6 +87,12 @@ def render_login() -> None:
         st.error(
             f"{role} sign-in is not configured. Set {prefix}_USERNAME and "
             f"{prefix}_PASSWORD in the project .env file."
+        )
+    if role == "Employee" and DEMO_EMPLOYEE_LOGIN_ENABLED:
+        st.info(
+            "Development demo login: username `emp1` · password `emp1-demo`. "
+            "Configure NEXAHR_EMPLOYEE_USERNAME and NEXAHR_EMPLOYEE_PASSWORD "
+            "in .env to use your own credentials."
         )
 
     with st.form("login-form"):
