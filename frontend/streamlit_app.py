@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from frontend.api import check_health, stream_chat
 from frontend.auth import render_login
+from frontend.leave_balance import answer_leave_balance_question
 from frontend.ui import (
     load_styles,
     render_chat_history,
@@ -32,6 +33,7 @@ def consume_chat(question: str, workflow_panel: Any) -> None:
     result: dict = {}
     st.session_state["last_source"] = ""
     st.session_state["last_trace"] = []
+    st.session_state["last_events"] = []
 
     with st.chat_message("assistant"):
         answer_placeholder = st.empty()
@@ -40,20 +42,37 @@ def consume_chat(question: str, workflow_panel: Any) -> None:
             unsafe_allow_html=True,
         )
         try:
-            for event in stream_chat(question):
-                if event.get("type") == "step":
-                    events.append(event)
-                    st.session_state["last_events"] = events.copy()
-                    st.session_state["last_trace"] = [
-                        line
-                        for item in events
-                        for line in item.get("data", {}).get("trace", [])
-                    ]
-                    render_workflow_panel(workflow_panel, events, running=True)
-                elif event.get("type") == "complete":
-                    result = event.get("result", {})
-                elif event.get("type") == "error":
-                    raise RuntimeError(event.get("message", "The chat request failed."))
+            if st.session_state.get("role") == "Employee":
+                leave_result = answer_leave_balance_question(
+                    question,
+                    st.session_state.get("username", ""),
+                )
+            else:
+                leave_result = None
+
+            if leave_result is not None:
+                events.extend(leave_result["events"])
+                st.session_state["last_events"] = events.copy()
+                st.session_state["last_trace"] = leave_result["trace"]
+                render_workflow_panel(workflow_panel, events, running=True)
+                result = leave_result
+            else:
+                for event in stream_chat(question):
+                    if event.get("type") == "step":
+                        events.append(event)
+                        st.session_state["last_events"] = events.copy()
+                        st.session_state["last_trace"] = [
+                            line
+                            for item in events
+                            for line in item.get("data", {}).get("trace", [])
+                        ]
+                        render_workflow_panel(workflow_panel, events, running=True)
+                    elif event.get("type") == "complete":
+                        result = event.get("result", {})
+                    elif event.get("type") == "error":
+                        raise RuntimeError(
+                            event.get("message", "The chat request failed.")
+                        )
 
             if not result:
                 raise RuntimeError("The chat stream ended before returning an answer.")
@@ -84,7 +103,7 @@ def consume_chat(question: str, workflow_panel: Any) -> None:
                     "citations": citations,
                 }
             )
-        except (requests.RequestException, RuntimeError, ValueError) as exc:
+        except (requests.RequestException, RuntimeError, ValueError, OSError) as exc:
             answer = str(exc)
             answer_placeholder.error(answer)
             st.session_state.setdefault("messages", []).append(
