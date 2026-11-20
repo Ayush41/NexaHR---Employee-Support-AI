@@ -3,6 +3,7 @@ import html
 import requests
 import streamlit as st
 
+from frontend import api
 from frontend import config
 
 WORKFLOW_STEPS = [
@@ -25,7 +26,7 @@ NODE_TO_STEP = {
     "generate_from_web": "generate",
     "direct_answer": "generate",
     "insufficient": "generate",
-    "employee_leave_balance": "generate",
+    "employee_records": "generate",
 }
 
 
@@ -86,7 +87,7 @@ def render_workflow_panel(container, events: list[dict], running: bool) -> None:
             skipped = (
                 (route == "direct" and step_id in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"})
                 or (
-                    route == "employee_leave_records"
+                    route == "employee_records"
                     and step_id in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"}
                 )
                 or (step_id == "search_web" and kb_grade == "good")
@@ -118,7 +119,7 @@ def render_workflow_panel(container, events: list[dict], running: bool) -> None:
                     and key in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"}
                 )
                 or (
-                    route == "employee_leave_records"
+                    route == "employee_records"
                     and key in {"retrieve_kb", "grade_kb", "search_web", "rewrite_query"}
                 )
                 for key in earlier_steps
@@ -172,7 +173,7 @@ def render_workflow_panel(container, events: list[dict], running: bool) -> None:
             "web": "Tavily web search",
             "direct": "Direct response",
             "insufficient_evidence": "Insufficient evidence",
-            "employee_leave_records": "Employee leave records (demo)",
+            "employee_records": "Authorized employee records",
         }
         source_content = (
             f'<div class="source-value">{html.escape(source_labels.get(source, source))}</div>'
@@ -193,31 +194,21 @@ def render_sidebar() -> None:
         render_brand()
         role = st.session_state.get("role", "Employee")
         st.caption("HR & management workspace" if role == "Admin" else "Employee workspace")
-        if role == "Employee":
-            from frontend.leave_balance import load_employee_leave_record
-
-            employee = load_employee_leave_record(
-                st.session_state.get("username", "")
-            )
-            if employee:
-                st.markdown(
-                    f"**{html.escape(employee['full_name'])}**  \n"
-                    f"Job ID: `{html.escape(employee['employee_id'])}`"
-                )
-                st.caption(
-                    f"{html.escape(employee['job_title'])} · "
-                    f"{html.escape(employee['department'])}"
-                )
-                st.caption(
-                    f"{html.escape(employee['location'])} · "
-                    f"Manager: {html.escape(employee['manager'])}"
-                )
-            else:
-                st.caption(
-                    f"Employee ID: {html.escape(st.session_state.get('username', ''))}"
-                )
+        account = st.session_state.get("account", {})
+        st.caption(html.escape(account.get("email", "")))
         if st.button("Sign out", use_container_width=True):
-            st.session_state.clear()
+            logout_notice = ""
+            try:
+                api.logout(st.session_state.get("access_token", ""))
+            except (requests.RequestException, RuntimeError, ValueError) as exc:
+                logout_notice = (
+                    "The local sign-out succeeded, but the backend session could not "
+                    f"be revoked: {exc}"
+                )
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            if logout_notice:
+                st.session_state["auth_notice"] = logout_notice
             st.rerun()
 
         if role == "Admin":
@@ -235,11 +226,12 @@ def render_sidebar() -> None:
                 disabled=uploaded_file is None,
                 use_container_width=True,
             ):
-                from frontend.api import upload_document
-
                 try:
                     with st.spinner("Indexing policy document..."):
-                        result = upload_document(uploaded_file)
+                        result = api.upload_document(
+                            uploaded_file,
+                            st.session_state.get("access_token", ""),
+                        )
                     st.success(
                         f"Indexed {result['file']} ({result['chunks']} chunks)."
                     )
@@ -253,7 +245,9 @@ def render_sidebar() -> None:
         else:
             st.divider()
             st.markdown("#### Your HR assistant")
-            st.caption("Ask questions about company policies and workplace support.")
+            st.caption(
+                "Ask about company policies or your profile, leave, attendance, and benefits."
+            )
 
         st.divider()
         st.caption(f"Connected API · {config.API_BASE_URL}")

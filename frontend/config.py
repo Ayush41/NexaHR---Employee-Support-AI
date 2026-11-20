@@ -1,21 +1,30 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+import streamlit as st
+from dotenv import dotenv_values
+from streamlit.errors import StreamlitSecretNotFoundError
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(ROOT_DIR / ".env")
+LOCAL_SETTINGS = dotenv_values(ROOT_DIR / ".env")
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8888").rstrip("/")
-ADMIN_USERNAME = os.getenv("NEXAHR_ADMIN_USERNAME", "")
-ADMIN_PASSWORD = os.getenv("NEXAHR_ADMIN_PASSWORD", "")
-APP_ENV = os.getenv("APP_ENV", "development").strip().casefold()
-DEMO_EMPLOYEE_LOGIN_ENABLED = APP_ENV not in {"prod", "production"}
-DEMO_EMPLOYEE_USERNAME = "emp1"
-DEMO_EMPLOYEE_PASSWORD = "emp1-demo"
-EMPLOYEE_USERNAME = os.getenv("NEXAHR_EMPLOYEE_USERNAME", "").strip()
-EMPLOYEE_PASSWORD = os.getenv("NEXAHR_EMPLOYEE_PASSWORD", "")
-if DEMO_EMPLOYEE_LOGIN_ENABLED:
-    EMPLOYEE_USERNAME = EMPLOYEE_USERNAME or DEMO_EMPLOYEE_USERNAME
-    EMPLOYEE_PASSWORD = EMPLOYEE_PASSWORD or DEMO_EMPLOYEE_PASSWORD
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
+
+def _get_setting(name: str, default: str = "") -> str:
+    environment_value = os.getenv(name)
+    if environment_value:
+        return environment_value
+
+    try:
+        secret_value = st.secrets.get(name)
+    except StreamlitSecretNotFoundError:
+        secret_value = None
+    if secret_value is not None:
+        return str(secret_value)
+    local_value = LOCAL_SETTINGS.get(name)
+    return str(local_value) if local_value is not None else default
+
+
+API_BASE_URL = _get_setting(
+    "API_BASE_URL", "http://127.0.0.1:8888"
+).rstrip("/")
+APP_ENV = _get_setting("APP_ENV", "development").strip().casefold()
