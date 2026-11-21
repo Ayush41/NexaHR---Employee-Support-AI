@@ -10,6 +10,14 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     app_name: str = "NexaHR"
     app_env: str = "development"
+    streamlit_app_url: str = "http://127.0.0.1:8501"
+    database_url: str = "sqlite:///./data/nexahr.db"
+    session_ttl_hours: int = 12
+    bootstrap_admin_email: str = ""
+    bootstrap_admin_username: str = ""
+    bootstrap_admin_password: str = ""
+    nexahr_admin_username: str = ""
+    nexahr_admin_password: str = ""
 
     # LLM Settings (Groq & OpenAI fallback)
     groq_api_key: str = ""
@@ -26,7 +34,6 @@ class Settings(BaseSettings):
 
     top_k: int = 4
     max_retries: int = 1
-    admin_api_key: str = "change-me-in-production"
     audit_db_path: str = str(BASE_DIR / "data" / "audit.db")
     upload_dir: str = str(BASE_DIR / "uploads")
     sample_kb_dir: str = str(BASE_DIR / "data" / "sample_kb")

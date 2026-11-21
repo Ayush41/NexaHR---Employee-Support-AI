@@ -1,37 +1,33 @@
 # NexaHR
 
-**NexaHR is an AI-powered employee support copilot that answers workplace and HR policy questions using a company knowledge base, with source-aware responses and a controlled web fallback.**
-
-The project demonstrates an evidence-first, agentic Retrieval-Augmented Generation (RAG) workflow. It is designed to help employees find relevant guidance while making the answer's source and workflow decisions visible.
+**NexaHR is an AI-powered employee support copilot for company HR policies and personal employee records.** It combines an evidence-first LangGraph workflow with account-based access to employee profile, leave, attendance, and benefits data.
 
 ## Features
 
-- Ask questions about HR policies and workplace support in a Streamlit chat interface.
-- Route requests with LangGraph and retrieve relevant company documents from Pinecone.
-- Grade retrieved evidence before generating a policy-grounded answer.
-- Fall back to Tavily web search when private evidence is insufficient; rewrite and retry weak queries within a configured limit.
-- Display workflow progress, final source, and available citations.
-- Provide admin document ingestion for PDF, DOCX, TXT, and Markdown files.
-- Include a frontend-only employee leave-balance demo to illustrate personalized answers.
+- Streamlit workspace for employees and HR administrators.
+- Employee self-registration with administrator approval.
+- Admin-managed employee accounts, profiles, leave balances, attendance, and benefit records.
+- Backend-enforced roles, expiring sessions, password hashing, and forced password changes for admin-created accounts.
+- LangGraph policy Q&A using private Pinecone retrieval, evidence grading, Tavily web fallback, and bounded query retries.
+- Personal employee questions answered from the signed-in employee's own database records, without sending those records to the RAG model.
+- Admin policy document ingestion and visible answer sources/workflow trace.
 
 ## Architecture
 
 ![NexaHR architecture overview](architecture.png)
 
-The diagram is a high-level target architecture. The current repository implementation uses FastAPI, a modular Streamlit frontend, Pinecone, and a SQLite audit store. Some deployment and UI components shown in the diagram represent design direction rather than a configured production deployment.
-
-## LangGraph Nodes Diagram 
-![Langchain-Graph-Workflow](langchain_output.png)
+The diagram is a high-level architecture reference. The current implementation uses FastAPI, a modular Streamlit frontend, SQLAlchemy with SQLite locally/PostgreSQL in production, Pinecone, and a SQLite audit log.
 
 ### Technology
 
-- **API:** Python, FastAPI, Uvicorn
+- **API and authorization:** Python, FastAPI, SQLAlchemy
 - **Frontend:** Streamlit
-- **Agent orchestration and RAG:** LangGraph, LangChain
-- **Language models:** Groq by default; OpenAI is supported as an alternative
-- **Private vector search:** Pinecone with Hugging Face sentence-transformer embeddings
+- **Agent orchestration:** LangGraph and LangChain
+- **Language models:** Groq by default; OpenAI is supported
+- **Policy search:** Pinecone and Hugging Face sentence-transformer embeddings
 - **External search:** Tavily
-- **Audit data:** SQLite
+- **Accounts database:** SQLite locally; PostgreSQL on Render
+- **Schema migrations:** Alembic
 
 ## App DEMO
 <img width="1919" height="956" alt="image" src="https://github.com/user-attachments/assets/f0abdd52-fee3-43d7-bab2-c6a505b1144e" />
@@ -41,83 +37,92 @@ The diagram is a high-level target architecture. The current repository implemen
 
 ## Getting started
 
-### Requirements
-
-- Python 3.12
-- API credentials for a supported language model and the services used by your workflow
-
-### Install
-
-From the repository root, create and activate a virtual environment, then install dependencies:
+Use Python 3.12. The project uses separate environments locally: `.venv312` for FastAPI and `.venv` for Streamlit.
 
 ```powershell
+py -3.12 -m venv .venv312
+.\.venv312\Scripts\python.exe -m pip install -r requirements-backend.txt
+
 py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Create a `.env` file in the project root and configure the services you intend to use:
-
-```env
-GROQ_API_KEY=your-groq-api-key
-GROQ_MODEL=openai/gpt-oss-120b
-
-PINECONE_API_KEY=your-pinecone-api-key
-PINECONE_INDEX_NAME=NexaHR_Policy-RAG
-PINECONE_NAMESPACE=company-hr-kb
-TAVILY_API_KEY=your-tavily-api-key
-
-# Optional language model alternative
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
-
-# Streamlit sign-in and backend connection
-NEXAHR_ADMIN_USERNAME=admin
-NEXAHR_ADMIN_PASSWORD=replace-with-a-strong-password
-NEXAHR_EMPLOYEE_USERNAME=employee
-NEXAHR_EMPLOYEE_PASSWORD=replace-with-a-strong-password
-ADMIN_API_KEY=replace-with-a-strong-api-key
-API_BASE_URL=http://127.0.0.1:8888
-```
-
-Keep `.env` private and never commit real credentials. The model defaults to `openai/gpt-oss-120b` when using Groq. An OpenAI key can be used instead when Groq is not configured.
-
-### Run locally
+Copy `.env.example` to `.env` and set your model, Pinecone, Tavily, and initial administrator settings. Never commit `.env` or use example credentials outside local development.
 
 Start the backend from the repository root:
 
 ```powershell
-python Start_App.py
+.\.venv312\Scripts\python.exe .\Start_App.py
 ```
 
-In a second terminal, activate the same virtual environment and start Streamlit:
+In another terminal, start Streamlit:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-python -m streamlit run frontend\streamlit_app.py
+.\.venv\Scripts\python.exe -m streamlit run frontend\streamlit_app.py
 ```
 
-Open the Streamlit URL printed in the terminal. The API is available at `http://127.0.0.1:8888`; interactive API documentation is at `http://127.0.0.1:8888/docs`.
+Open the Streamlit URL printed in the terminal. The local API defaults to `http://127.0.0.1:8888`; its health endpoint is `/api/health`, and API documentation is at `/docs`.
 
-## Agent workflow
+The backend runs Alembic migrations on startup. In development, it seeds a sample employee account (`emp1` / `emp1-demo`) with clearly labeled demo data. The demo account is disabled in production.
 
-For HR questions, the LangGraph workflow routes the request to private knowledge retrieval, grades the retrieved evidence, then answers from the knowledge base when it is sufficient. If evidence is weak, it searches the web and grades those results. A bounded rewrite-and-retry path prevents unsupported answers when neither source provides adequate evidence. Greetings and simple conversational messages can be answered directly without retrieval.
+## Accounts and employee data
 
-The [`langgraph_visualization.ipynb`](langgraph_visualization.ipynb) notebook renders the compiled backend graph and explains its state, routing, and evidence checks. Live queries are optional and disabled by default.
+- Employees register with their work email and employee ID. New accounts remain pending until an administrator approves them.
+- Admins can add accounts, edit employee and leave details, manage attendance/benefit records, and deactivate/reactivate accounts. Deactivation retains history.
+- Admin-created accounts sign in with the temporary password set by the admin and must change it before using the workspace.
+- Employees can view only their own profile and records. Company-wide policy questions continue through the existing private-knowledge RAG workflow.
+- Employees and HR/Admins use the same **Sign in** form. The first Admin is created at backend startup from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when the database has no administrator; those credentials are entered in the shared sign-in form. Employee registration cannot grant admin access.
+- The current roles are `admin` and `employee`. HR/Managers who need the admin workspace must be provisioned as `admin`; this role can manage all employee records and upload policy documents. Additional Admin accounts are not currently created from the Streamlit UI.
+- Admin credentials are configured on the backend, never in Streamlit secrets. Streamlit secrets should contain only frontend settings such as `API_BASE_URL` and `APP_ENV`.
 
-## API
+This is a portfolio prototype, not a complete HR information system. Before using real employee data, add organization identity verification, password recovery, operational audit retention, and a security/privacy review for all model and tracing providers.
 
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /api/health` | Check backend health |
-| `POST /api/chat` | Submit a question and receive a complete answer |
-| `POST /api/chat/stream` | Stream workflow progress and the final answer |
-| `POST /api/ingest` | Upload and index a supported HR document |
-| `GET /api/groq-models` | Check Groq model availability for the configured key |
+## Deployment
 
-## Demo data and security
+### FastAPI backend on Render
 
-The employee leave-balance example uses a local sample record (`emp1`, Alex Morgan) and is for demonstration only. Its data is not authoritative HR data and is not retrieved from the backend knowledge base.
+Deploy the repository root as a **Docker Web Service**. The root Dockerfile builds only the backend and binds Uvicorn to Render's `PORT`. Configure these in the Render service environment:
 
-Streamlit's configured usernames and passwords provide basic prototype sign-in, not production identity management. The FastAPI chat endpoints do not currently enforce employee/admin sessions or role-based authorization; the ingestion endpoint uses an admin API key. Do not expose this application or real employee data to a network without adding appropriate authentication, authorization, transport security, and operational controls.
+```text
+APP_ENV=production
+DATABASE_URL=<Render PostgreSQL connection string>
+BOOTSTRAP_ADMIN_EMAIL=<initial administrator email>
+BOOTSTRAP_ADMIN_PASSWORD=<strong initial password>
+GROQ_API_KEY=<model credential>
+PINECONE_API_KEY=<Pinecone credential>
+TAVILY_API_KEY=<Tavily credential>
+```
+
+Set `GROQ_MODEL`, Pinecone index/namespace, and embedding settings as needed. Set `LANGSMITH_TRACING=true` and its credentials only if tracing is enabled and the data-handling implications are understood. The bootstrap admin is created only when the database has no admin; after the first successful deployment, the bootstrap password can be removed from Render. Keep secrets out of the image and repository.
+
+Render's container filesystem is ephemeral. Use Render PostgreSQL for accounts and employee records; the audit database and uploaded files need a persistent disk or an external storage solution if they must survive restarts.
+
+### Streamlit Community Cloud frontend
+
+Set the Streamlit app's secrets to point at the deployed backend:
+
+```toml
+API_BASE_URL = "https://<your-render-service>.onrender.com"
+APP_ENV = "production"
+```
+
+The Streamlit server sends authenticated API requests to Render over HTTPS; no browser CORS setup is required. Model, database, Pinecone, Tavily, LangSmith, and bootstrap-admin secrets belong on the backend, not in Streamlit secrets.
+
+Optionally set `STREAMLIT_APP_URL` on Render to your Streamlit Community Cloud URL so the backend landing page links to the frontend.
+
+## API overview
+
+| Endpoint | Access | Purpose |
+| --- | --- | --- |
+| `GET /api/health` | Public | Backend health check |
+| `POST /api/auth/register` | Public | Register a pending employee account |
+| `POST /api/auth/login` | Public | Create an authenticated session |
+| `GET /api/employee/me` | Employee | Read the signed-in employee's own profile and records |
+| `/api/admin/registrations` | Admin | Review, approve, or reject registrations |
+| `/api/admin/employees` | Admin | List, add, update, deactivate, and reactivate employees |
+| `/api/admin/employees/{id}/attendance` | Admin | Manage attendance records |
+| `/api/admin/employees/{id}/benefits` | Admin | Manage benefit records |
+| `POST /api/chat` and `/api/chat/stream` | Authenticated | Ask policy or personal employee-record questions |
+| `POST /api/ingest` | Admin | Upload and index an HR policy document |
+
+For the compiled agent graph and workflow explanation, see [`langgraph_visualization.ipynb`](langgraph_visualization.ipynb).
